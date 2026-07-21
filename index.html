@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convencer al Chamote 🌴✈️</title>
+<style>
+  :root{
+    --bg1:#0f0c29;
+    --bg2:#302b63;
+    --bg3:#24243e;
+    --accent:#ff6b6b;
+    --accent2:#ffd93d;
+    --card:#1c1836;
+    --text:#f4f4f9;
+    --muted:#a9a5c9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+    background-size:200% 200%;
+    animation:gradientShift 15s ease infinite;
+    color:var(--text);
+    min-height:100vh;
+    padding:24px 16px 60px;
+  }
+  @keyframes gradientShift{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  header{text-align:center;margin-bottom:28px;}
+  header h1{
+    font-size:1.8rem;
+    background:linear-gradient(90deg,var(--accent2),var(--accent));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    margin-bottom:6px;
+  }
+  header p{color:var(--muted);font-size:.95rem;}
+
+  .photo-card{
+    background:var(--card);
+    border-radius:20px;
+    padding:20px;
+    text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    margin-bottom:24px;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .foto-chamote{
+    width:220px;height:220px;
+    object-fit:cover;
+    border-radius:16px;
+    margin:0 auto 16px;
+    display:block;
+    border:4px solid rgba(255,255,255,.15);
+    box-shadow:0 0 0 6px rgba(255,107,107,.15);
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+  }
+  .counter{
+    display:inline-block;
+    background:rgba(255,217,61,.12);
+    color:var(--accent2);
+    padding:6px 14px;
+    border-radius:999px;
+    font-size:.85rem;
+    font-weight:600;
+    margin-bottom:16px;
+  }
+  .btn-abrir-modal{
+    display:block;
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(90deg,var(--accent),#ff8e53);
+    color:#fff;
+    font-weight:700;
+    font-size:1rem;
+    cursor:pointer;
+    transition:transform .15s ease;
+  }
+  .btn-abrir-modal:hover{transform:translateY(-2px);}
+
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(10,8,30,.75);
+    backdrop-filter:blur(3px);
+    display:none;
+    align-items:center;justify-content:center;
+    padding:20px;
+    z-index:100;
+    animation:fadeInOverlay .2s ease;
+  }
+  .overlay.abierto{display:flex;}
+  @keyframes fadeInOverlay{from{opacity:0;}to{opacity:1;}}
+  .modal{
+    background:var(--card);
+    border-radius:18px;
+    padding:24px;
+    max-width:420px;
+    width:100%;
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+    position:relative;
+    animation:popModal .25s ease;
+  }
+  @keyframes popModal{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:scale(1);}}
+  .modal h3{margin-bottom:14px;font-size:1.15rem;}
+  .modal .cerrar{
+    position:absolute;top:14px;right:16px;
+    background:none;border:none;color:var(--muted);
+    font-size:1.3rem;cursor:pointer;line-height:1;
+  }
+  .modal .cerrar:hover{color:var(--text);}
+
+  .form-card{
+    background:transparent;
+    padding:0;
+  }
+  .form-card label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:6px;}
+  .form-card input, .form-card textarea{
+    width:100%;
+    background:#141229;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:10px;
+    padding:10px 12px;
+    color:var(--text);
+    font-size:.95rem;
+    margin-bottom:12px;
+    resize:vertical;
+    font-family:inherit;
+  }
+  .form-card input:focus, .form-card textarea:focus{
+    outline:none;border-color:var(--accent);
+  }
+  #form-mensaje button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(90deg,var(--accent),#ff8e53);
+    color:#fff;
+    font-weight:700;
+    font-size:.95rem;
+    cursor:pointer;
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  #form-mensaje button:hover{transform:translateY(-2px);}
+  #form-mensaje button:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  .error{color:var(--accent);font-size:.8rem;margin:-6px 0 10px;display:none;}
+
+  .messages h3{
+    font-size:1rem;
+    color:var(--muted);
+    margin-bottom:16px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .board{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:18px 14px;
+    padding:6px 2px 10px;
+  }
+  .msg{
+    --rot:0deg;
+    position:relative;
+    background:var(--note-color,#ffe066);
+    color:#3a2f00;
+    border-radius:2px;
+    padding:16px 14px 14px;
+    min-height:130px;
+    box-shadow:0 6px 14px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.4) inset;
+    transform:rotate(var(--rot));
+    animation:popIn .35s ease;
+    display:flex;
+    flex-direction:column;
+    font-family:'Comic Sans MS','Segoe UI',cursive,sans-serif;
+    transition:transform .15s ease;
+  }
+  .msg:hover{transform:rotate(0deg) scale(1.04);z-index:5;}
+  .msg::before{
+    content:'';
+    position:absolute;
+    top:-10px;left:50%;
+    transform:translateX(-50%) rotate(-3deg);
+    width:46px;height:18px;
+    background:rgba(255,255,255,.55);
+    border:1px solid rgba(255,255,255,.6);
+    box-shadow:0 2px 4px rgba(0,0,0,.15);
+  }
+  @keyframes popIn{
+    from{opacity:0;transform:rotate(var(--rot)) scale(.7);}
+    to{opacity:1;transform:rotate(var(--rot)) scale(1);}
+  }
+  .msg .who{font-weight:700;font-size:.85rem;margin-bottom:6px;opacity:.75;}
+  .msg .text{font-size:.95rem;line-height:1.35;flex:1;word-break:break-word;}
+  .msg .time{font-size:.65rem;margin-top:8px;opacity:.6;align-self:flex-end;}
+
+  .empty{
+    text-align:center;color:var(--muted);
+    padding:30px 10px;font-size:.9rem;
+  }
+  .loading{text-align:center;color:var(--muted);padding:20px;font-size:.85rem;}
+  .disclaimer{
+    text-align:center;color:var(--muted);
+    font-size:.7rem;margin-top:24px;opacity:.7;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Operación: Chamote a Buenos Aires 🇦🇷</h1>
+    <p>Dejale un mensaje para que se termine de convencer</p>
+  </header>
+
+  <div class="photo-card">
+    <img class="foto-chamote" src="chamote.jpg" alt="El Chamote">
+    <h2>El Chamote</h2>
+    <div class="sub">Falta un empujoncito para que diga que sí</div>
+    <span class="counter" id="counter">0 mensajes de aliento</span>
+    <button class="btn-abrir-modal" id="abrirModal">Dejarle un mensaje 💌</button>
+  </div>
+
+  <div class="messages">
+    <h3>Mensajes de la barra</h3>
+    <div id="lista" class="board">
+      <div class="loading">Cargando mensajes...</div>
+    </div>
+  </div>
+
+  <div class="disclaimer">Los mensajes son visibles para todos los que entren a esta página</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="cerrar" id="cerrarModal">✕</button>
+    <h3>Convencé al Chamote</h3>
+    <div class="form-card" id="form-mensaje">
+      <label for="nombre">Tu nombre</label>
+      <input type="text" id="nombre" placeholder="¿Quién sos?" maxlength="40">
+      <label for="mensaje">Tu mensaje motivacional</label>
+      <textarea id="mensaje" rows="3" placeholder="Dale Chamote, vamos a Bs As..."></textarea>
+      <div class="error" id="error">Completá tu nombre y el mensaje.</div>
+      <button id="enviar">Enviar mensaje 🚀</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ⚠️ CONFIGURÁ ACÁ: pegá la URL de tu blob (ver instrucciones de creación)
+  // Ejemplo: 'https://jsonblob.com/api/jsonBlob/1a2b3c4d-5678-90ef-ghij-klmnopqrstuv'
+  const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019f8507-d713-74db-a2ee-dd571da2fdb4';
+
+  const listaEl = document.getElementById('lista');
+  const counterEl = document.getElementById('counter');
+  const btn = document.getElementById('enviar');
+  const nombreEl = document.getElementById('nombre');
+  const mensajeEl = document.getElementById('mensaje');
+  const errorEl = document.getElementById('error');
+
+  const COLORES = ['#ffe066','#ff9f9f','#9fd8ff','#b8f2b0','#ffc6e8','#ffd7a8'];
+  let ultimaCantidad = -1;
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  // Rotación y color estables por mensaje (basados en su fecha, no random en cada render)
+  function estiloNota(fecha){
+    const seed = fecha % 1000;
+    const rot = (seed % 7) - 3; // entre -3 y 3 grados
+    const color = COLORES[seed % COLORES.length];
+    return `--rot:${rot}deg; --note-color:${color};`;
+  }
+
+  function render(mensajes){
+    counterEl.textContent = mensajes.length + (mensajes.length === 1 ? ' mensaje de aliento' : ' mensajes de aliento');
+    if(!mensajes.length){
+      listaEl.innerHTML = '<div class="empty">Todavía nadie dejó un mensaje. ¡Sé el primero! 🙌</div>';
+      ultimaCantidad = 0;
+      return;
+    }
+    if(mensajes.length === ultimaCantidad) return; // evita parpadeo si no cambió nada
+    ultimaCantidad = mensajes.length;
+    listaEl.innerHTML = mensajes
+      .slice()
+      .reverse()
+      .map(m => `
+        <div class="msg" style="${estiloNota(m.fecha)}">
+          <div class="who">${escapeHtml(m.nombre)}</div>
+          <div class="text">${escapeHtml(m.texto)}</div>
+          <div class="time">${new Date(m.fecha).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+      `).join('');
+  }
+
+  // Lee el archivo remoto (blob) completo
+  async function cargarMensajes(){
+    try{
+      const res = await fetch(BLOB_URL, { headers: { 'Accept': 'application/json' } });
+      if(!res.ok) throw new Error('No se pudo leer el archivo');
+      const mensajes = await res.json();
+      render(mensajes);
+      return mensajes;
+    }catch(e){
+      listaEl.innerHTML = '<div class="empty">No se pudieron cargar los mensajes. Revisá la configuración de BLOB_URL.</div>';
+      return [];
+    }
+  }
+
+  // Reescribe el archivo remoto completo con el mensaje nuevo agregado
+  async function guardarMensaje(nombre, texto){
+    const mensajes = await cargarMensajes();
+    mensajes.push({ nombre, texto, fecha: Date.now() });
+    const res = await fetch(BLOB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mensajes)
+    });
+    if(!res.ok) throw new Error('No se pudo guardar el mensaje');
+    render(mensajes);
+  }
+
+  const overlay = document.getElementById('overlay');
+  const abrirBtn = document.getElementById('abrirModal');
+  const cerrarBtn = document.getElementById('cerrarModal');
+
+  function abrirModal(){
+    overlay.classList.add('abierto');
+    nombreEl.focus();
+  }
+  function cerrarModal(){
+    overlay.classList.remove('abierto');
+    errorEl.style.display = 'none';
+  }
+  abrirBtn.addEventListener('click', abrirModal);
+  cerrarBtn.addEventListener('click', cerrarModal);
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) cerrarModal(); });
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') cerrarModal(); });
+
+  btn.addEventListener('click', async () => {
+    const nombre = nombreEl.value.trim();
+    const texto = mensajeEl.value.trim();
+    if(!nombre || !texto){
+      errorEl.style.display = 'block';
+      return;
+    }
+    errorEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    try{
+      await guardarMensaje(nombre, texto);
+      mensajeEl.value = '';
+      nombreEl.value = '';
+      cerrarModal();
+    }catch(e){
+      errorEl.textContent = 'Error al guardar. Intentá de nuevo.';
+      errorEl.style.display = 'block';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Enviar mensaje 🚀';
+    }
+  });
+
+  if(BLOB_URL.includes('PEGA_ACA_TU_URL')){
+    listaEl.innerHTML = '<div class="empty">⚠️ Falta configurar BLOB_URL en el script.</div>';
+    console.warn('Configurá la constante BLOB_URL con la URL de tu jsonblob antes de deployar.');
+  }else{
+    cargarMensajes();
+    setInterval(cargarMensajes, 5000); // revisa mensajes nuevos cada 5 segundos
+  }
+</script>
+</body>
+</html>
