@@ -283,6 +283,7 @@
   }
 
   function render(mensajes){
+    if(mensajes.length < ultimaCantidad) return; // nunca retrocede: ignora respuestas viejas/cacheadas
     counterEl.textContent = mensajes.length + (mensajes.length === 1 ? ' mensaje de aliento' : ' mensajes de aliento');
     if(!mensajes.length){
       listaEl.innerHTML = '<div class="empty">Todavía nadie dejó un mensaje. ¡Sé el primero! 🙌</div>';
@@ -303,10 +304,13 @@
       `).join('');
   }
 
-  // Lee el archivo remoto (blob) completo
+  // Lee el archivo remoto (blob) completo, siempre fresco (sin caché)
   async function cargarMensajes(){
     try{
-      const res = await fetch(BLOB_URL, { headers: { 'Accept': 'application/json' } });
+      const res = await fetch(BLOB_URL + '?t=' + Date.now(), {
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+      });
       if(!res.ok) throw new Error('No se pudo leer el archivo');
       const mensajes = await res.json();
       render(mensajes);
