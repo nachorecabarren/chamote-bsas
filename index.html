@@ -253,10 +253,16 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script>
-  // ⚠️ CONFIGURÁ ACÁ: pegá la URL de tu blob (ver instrucciones de creación)
-  // Ejemplo: 'https://jsonblob.com/api/jsonBlob/1a2b3c4d-5678-90ef-ghij-klmnopqrstuv'
-  const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019f8507-d713-74db-a2ee-dd571da2fdb4';
+  // ⚠️ CONFIGURÁ ACÁ los datos de tu repo
+  const REPO_OWNER = 'nachorecabarren';
+  const REPO_NAME  = 'TU-REPO';        // <-- poné el nombre real de tu repo
+  const BRANCH     = 'main';           // cambiá a 'master' si tu repo usa esa rama
+  const FILE_PATH  = 'mensajes.txt';   // archivo que debe existir en la raíz del repo con contenido: []
+  const GITHUB_TOKEN = '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';
+
+  const API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
 
   const listaEl = document.getElementById('lista');
   const counterEl = document.getElementById('counter');
@@ -274,22 +280,25 @@
     }[c]));
   }
 
-  // Rotación y color estables por mensaje (basados en su fecha, no random en cada render)
+  function utf8ToBase64(str){ return btoa(unescape(encodeURIComponent(str))); }
+  function base64ToUtf8(str){ return decodeURIComponent(escape(atob(str))); }
+
   function estiloNota(fecha){
     const seed = fecha % 1000;
-    const rot = (seed % 7) - 3; // entre -3 y 3 grados
+    const rot = (seed % 7) - 3;
     const color = COLORES[seed % COLORES.length];
     return `--rot:${rot}deg; --note-color:${color};`;
   }
 
   function render(mensajes){
+    if(mensajes.length < ultimaCantidad) return;
     counterEl.textContent = mensajes.length + (mensajes.length === 1 ? ' mensaje de aliento' : ' mensajes de aliento');
     if(!mensajes.length){
       listaEl.innerHTML = '<div class="empty">Todavía nadie dejó un mensaje. ¡Sé el primero! 🙌</div>';
       ultimaCantidad = 0;
       return;
     }
-    if(mensajes.length === ultimaCantidad) return; // evita parpadeo si no cambió nada
+    if(mensajes.length === ultimaCantidad) return;
     ultimaCantidad = mensajes.length;
     listaEl.innerHTML = mensajes
       .slice()
@@ -303,30 +312,47 @@
       `).join('');
   }
 
-  // Lee el archivo remoto (blob) completo
-  async function cargarMensajes(){
-    try{
-      const res = await fetch(BLOB_URL, { headers: { 'Accept': 'application/json' } });
-      if(!res.ok) throw new Error('No se pudo leer el archivo');
-      const mensajes = await res.json();
+  // Lee mensajes.txt directamente del repo (vía GitHub Contents API)
+  function cargarMensajes(){
+    return $.ajax({
+      url: `${API_URL}?ref=${BRANCH}&t=${Date.now()}`,
+      method: 'GET',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github+json'
+      },
+      cache: false
+    }).then(data => {
+      window.__ultimoSha = data.sha; // necesario para poder escribir después
+      const contenido = base64ToUtf8(data.content.replace(/\n/g, ''));
+      const mensajes = JSON.parse(contenido || '[]');
       render(mensajes);
       return mensajes;
-    }catch(e){
-      listaEl.innerHTML = '<div class="empty">No se pudieron cargar los mensajes. Revisá la configuración de BLOB_URL.</div>';
+    }).catch(() => {
+      listaEl.innerHTML = '<div class="empty">No se pudo leer mensajes.txt. Revisá REPO_NAME / que el archivo exista.</div>';
       return [];
-    }
+    });
   }
 
-  // Reescribe el archivo remoto completo con el mensaje nuevo agregado
+  // Reescribe mensajes.txt en el repo con el mensaje nuevo agregado
   async function guardarMensaje(nombre, texto){
-    const mensajes = await cargarMensajes();
+    const mensajes = await cargarMensajes(); // trae la versión más nueva + el sha actual
     mensajes.push({ nombre, texto, fecha: Date.now() });
-    const res = await fetch(BLOB_URL, {
+    await $.ajax({
+      url: API_URL,
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mensajes)
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github+json'
+      },
+      contentType: 'application/json',
+      data: JSON.stringify({
+        message: `mensaje de ${nombre}`,
+        content: utf8ToBase64(JSON.stringify(mensajes)),
+        sha: window.__ultimoSha,
+        branch: BRANCH
+      })
     });
-    if(!res.ok) throw new Error('No se pudo guardar el mensaje');
     render(mensajes);
   }
 
@@ -371,13 +397,8 @@
     }
   });
 
-  if(BLOB_URL.includes('PEGA_ACA_TU_URL')){
-    listaEl.innerHTML = '<div class="empty">⚠️ Falta configurar BLOB_URL en el script.</div>';
-    console.warn('Configurá la constante BLOB_URL con la URL de tu jsonblob antes de deployar.');
-  }else{
-    cargarMensajes();
-    setInterval(cargarMensajes, 5000); // revisa mensajes nuevos cada 5 segundos
-  }
+  cargarMensajes();
+  setInterval(cargarMensajes, 6000);
 </script>
 </body>
 </html>
