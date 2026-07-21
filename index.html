@@ -253,16 +253,11 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script>
-  // ⚠️ CONFIGURÁ ACÁ los datos de tu repo
-  const REPO_OWNER = 'nachorecabarren';
-  const REPO_NAME  = 'chamote-bsas';
-  const BRANCH     = 'main';           // cambiá a 'master' si tu repo usa esa rama
-  const FILE_PATH  = 'mensajes.txt';   // archivo que debe existir en la raíz del repo con contenido: []
-  const GITHUB_TOKEN = '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';
-
-  const API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+  // ⚠️ Datos de tu bin en jsonbin.io
+  const BIN_ID  = "6a5f98fcda38895dfe7baee8";
+  const API_KEY = "$2a$10$fQCeYxlkzoj0USVHHI4I9eE56S4uWZ10DOhxaUdS2GHoEturmBH5W";
+  const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
   const listaEl = document.getElementById('lista');
   const counterEl = document.getElementById('counter');
@@ -270,6 +265,9 @@
   const nombreEl = document.getElementById('nombre');
   const mensajeEl = document.getElementById('mensaje');
   const errorEl = document.getElementById('error');
+  const overlay = document.getElementById('overlay');
+  const abrirBtn = document.getElementById('abrirModal');
+  const cerrarBtn = document.getElementById('cerrarModal');
 
   const COLORES = ['#ffe066','#ff9f9f','#9fd8ff','#b8f2b0','#ffc6e8','#ffd7a8'];
   let ultimaCantidad = -1;
@@ -279,9 +277,6 @@
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[c]));
   }
-
-  function utf8ToBase64(str){ return btoa(unescape(encodeURIComponent(str))); }
-  function base64ToUtf8(str){ return decodeURIComponent(escape(atob(str))); }
 
   function estiloNota(fecha){
     const seed = fecha % 1000;
@@ -312,53 +307,36 @@
       `).join('');
   }
 
-  // Lee mensajes.txt directamente del repo (vía GitHub Contents API)
-  function cargarMensajes(){
-    return $.ajax({
-      url: `${API_URL}?ref=${BRANCH}&t=${Date.now()}`,
-      method: 'GET',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github+json'
-      },
-      cache: false
-    }).then(data => {
-      window.__ultimoSha = data.sha; // necesario para poder escribir después
-      const contenido = base64ToUtf8(data.content.replace(/\n/g, ''));
-      const mensajes = JSON.parse(contenido || '[]');
-      render(mensajes);
-      return mensajes;
-    }).catch(() => {
-      listaEl.innerHTML = '<div class="empty">No se pudo leer mensajes.txt. Revisá REPO_NAME / que el archivo exista.</div>';
+  // Lee los mensajes guardados en el bin de jsonbin
+  async function cargarMensajes(){
+    try{
+      const r = await fetch(API_URL + '?t=' + Date.now(), {
+        headers: { 'X-Master-Key': API_KEY, 'X-Bin-Meta': 'false', 'Cache-Control': 'no-cache' },
+        cache: 'no-store'
+      });
+      if(!r.ok) throw new Error('read failed');
+      const mensajes = await r.json();
+      const lista = Array.isArray(mensajes) ? mensajes : [];
+      render(lista);
+      return lista;
+    }catch(e){
+      listaEl.innerHTML = '<div class="empty">No se pudieron cargar los mensajes. Revisá BIN_ID / API_KEY.</div>';
       return [];
-    });
+    }
   }
 
-  // Reescribe mensajes.txt en el repo con el mensaje nuevo agregado
+  // Agrega el mensaje nuevo y reescribe el bin completo
   async function guardarMensaje(nombre, texto){
-    const mensajes = await cargarMensajes(); // trae la versión más nueva + el sha actual
+    const mensajes = await cargarMensajes();
     mensajes.push({ nombre, texto, fecha: Date.now() });
-    await $.ajax({
-      url: API_URL,
+    const r = await fetch(API_URL, {
       method: 'PUT',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github+json'
-      },
-      contentType: 'application/json',
-      data: JSON.stringify({
-        message: `mensaje de ${nombre}`,
-        content: utf8ToBase64(JSON.stringify(mensajes)),
-        sha: window.__ultimoSha,
-        branch: BRANCH
-      })
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+      body: JSON.stringify(mensajes)
     });
+    if(!r.ok) throw new Error('save failed');
     render(mensajes);
   }
-
-  const overlay = document.getElementById('overlay');
-  const abrirBtn = document.getElementById('abrirModal');
-  const cerrarBtn = document.getElementById('cerrarModal');
 
   function abrirModal(){
     overlay.classList.add('abierto');
