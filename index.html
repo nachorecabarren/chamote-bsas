@@ -253,10 +253,12 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script>
-  // ⚠️ CONFIGURÁ ACÁ: pegá la URL de tu blob (ver instrucciones de creación)
-  // Ejemplo: 'https://jsonblob.com/api/jsonBlob/1a2b3c4d-5678-90ef-ghij-klmnopqrstuv'
-  const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019f8507-d713-74db-a2ee-dd571da2fdb4';
+  // ⚠️ Datos de tu Gist (archivo de texto en GitHub)
+  const GIST_ID = '7335484ba7aa162e55ace3fe8e5531df';
+  const GITHUB_TOKEN = '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';
+  const GIST_FILENAME = 'mensajes.txt';
 
   const listaEl = document.getElementById('lista');
   const counterEl = document.getElementById('counter');
@@ -283,13 +285,14 @@
   }
 
   function render(mensajes){
+    if(mensajes.length < ultimaCantidad) return; // nunca retrocede
     counterEl.textContent = mensajes.length + (mensajes.length === 1 ? ' mensaje de aliento' : ' mensajes de aliento');
     if(!mensajes.length){
       listaEl.innerHTML = '<div class="empty">Todavía nadie dejó un mensaje. ¡Sé el primero! 🙌</div>';
       ultimaCantidad = 0;
       return;
     }
-    if(mensajes.length === ultimaCantidad) return; // evita parpadeo si no cambió nada
+    if(mensajes.length === ultimaCantidad) return;
     ultimaCantidad = mensajes.length;
     listaEl.innerHTML = mensajes
       .slice()
@@ -303,30 +306,43 @@
       `).join('');
   }
 
-  // Lee el archivo remoto (blob) completo
-  async function cargarMensajes(){
-    try{
-      const res = await fetch(BLOB_URL, { headers: { 'Accept': 'application/json' } });
-      if(!res.ok) throw new Error('No se pudo leer el archivo');
-      const mensajes = await res.json();
+  // Lee el archivo de texto (Gist) completo
+  function cargarMensajes(){
+    return $.ajax({
+      url: `https://api.github.com/gists/${GIST_ID}`,
+      method: 'GET',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github+json'
+      },
+      cache: false
+    }).then(data => {
+      const contenido = data.files[GIST_FILENAME] ? data.files[GIST_FILENAME].content : '[]';
+      const mensajes = JSON.parse(contenido || '[]');
       render(mensajes);
       return mensajes;
-    }catch(e){
-      listaEl.innerHTML = '<div class="empty">No se pudieron cargar los mensajes. Revisá la configuración de BLOB_URL.</div>';
+    }).catch(() => {
+      listaEl.innerHTML = '<div class="empty">No se pudieron cargar los mensajes. Revisá GIST_ID / GITHUB_TOKEN.</div>';
       return [];
-    }
+    });
   }
 
-  // Reescribe el archivo remoto completo con el mensaje nuevo agregado
+  // Reescribe el archivo de texto (Gist) con el mensaje nuevo agregado
   async function guardarMensaje(nombre, texto){
     const mensajes = await cargarMensajes();
     mensajes.push({ nombre, texto, fecha: Date.now() });
-    const res = await fetch(BLOB_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mensajes)
+    await $.ajax({
+      url: `https://api.github.com/gists/${GIST_ID}`,
+      method: 'PATCH',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github+json'
+      },
+      contentType: 'application/json',
+      data: JSON.stringify({
+        files: { [GIST_FILENAME]: { content: JSON.stringify(mensajes) } }
+      })
     });
-    if(!res.ok) throw new Error('No se pudo guardar el mensaje');
     render(mensajes);
   }
 
@@ -371,13 +387,8 @@
     }
   });
 
-  if(BLOB_URL.includes('PEGA_ACA_TU_URL')){
-    listaEl.innerHTML = '<div class="empty">⚠️ Falta configurar BLOB_URL en el script.</div>';
-    console.warn('Configurá la constante BLOB_URL con la URL de tu jsonblob antes de deployar.');
-  }else{
-    cargarMensajes();
-    setInterval(cargarMensajes, 5000); // revisa mensajes nuevos cada 5 segundos
-  }
+  cargarMensajes();
+  setInterval(cargarMensajes, 6000); // revisa mensajes nuevos cada 6 segundos
 </script>
 </body>
 </html>
